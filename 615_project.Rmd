@@ -1,0 +1,142 @@
+---
+title: "615_Project"
+author: "Matthew Zebert"
+date: "October 4, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load("arm","data.table","faraway","foreign","ggplot2","knitr", "dplyr")
+```
+
+
+Step 1: Select data from codebook and create a subset data frame of the desired predictors
+
+```{r, include=FALSE}
+#read in csv
+full <-  read.csv("recs2015_public_v1.csv")
+
+#rename desired predictors
+quant <-  full$NUMFRIG; #Number of refrigerators used
+size <- full$SIZRFRI1; #Size of most-used refrigerator
+door <- full$TYPERFR1; #Door arrangement of most-used refrigerator
+age <- full$AGERFRI1; #Age of most-used refrigerator
+ice <- full$ICE; #Through-the-door ice on most-used refrigerator
+size2 <- full$SIZRFRI2; #Size of second most-used refrigerator
+door2 <- full$TYPERFR2; #Door arrangement of second most-used refrigerator
+age2 <- full$AGERFRI2; #Age of second most-used refrigerator
+locate <- full$LOCRFRI2; #Location of second most-used refrigerator
+recyl <- full$RECYCAPP; #Received free recycling of old appliance or equipment (for example, a refrigerator)"
+star <- full$ESFRIG; #Energy Star qualified refrigerator (respondent reported)
+area <- full$REGIONC; #Census Region
+climate <- full$CLIMATE_REGION_PUB #Building America Climate Zone
+own <-  full$KOWNRENT; # Own or rent
+
+
+#combine into data frame
+df <- cbind(quant, size, door, age, ice, size2, door2, age2, locate, recyl, star, area, climate, own)
+df.2 <- data.frame(cbind(quant, size, door, age, ice, size2, door2, age2, locate, recyl, star, area, climate, own))
+class(df.2)
+attach(df.2)
+
+```
+Step 2: Begin to explore the data via tables, summaries, and plots to identify any issues or wrangling necessary
+
+```{r, include=FALSE}
+
+#EDA of size
+table(size)
+head(size)
+summary(size)
+
+
+#assume NA means they don't have a fride 
+size[size < 0] <- 0
+
+
+#EDA of quant and size with plots
+boxplot(quant)
+table(quant)
+hist(quant)
+hist(size)
+size.jitter <-  jitter(size, factor = 1, amount = NULL)
+quant.jitter  <-  jitter(quant, factor = 1, amount = NULL)
+plot(quant.jitter, size.jitter)
+
+#EDA of fridge #2
+table(size2)
+head(size)
+summary(size)
+
+#assume that NA means they don't have a second fridge
+size2[size2 < 0] <- 0
+
+
+#Remove NA's from age
+age[age < 0] <- NA
+age2[age2 < 0] <- NA
+
+age.jitter <-   jitter(age, factor = 1, amount = NULL)
+age2.jitter <-   jitter(age2, factor = 1, amount = NULL)
+plot(age.jitter, quant.jitter)
+
+#age uses 41 and 42 as responses which throws off the plot
+#replace 41, 42, 5 response in age with 4, 5, and 6
+age.test <-  age
+age.test <- replace(age.test, which(age.test == 41), 4)
+age.test <- replace(age.test, which(age.test == 5), 6)
+age.test <- replace(age.test, which(age.test == 42), 5)
+#df$q2 <- replace(df$q, which(df$q < 0), NA)
+table(age.test)
+table(age)
+
+age.jitter2 <-   jitter(age.test, factor = 1, amount = NULL)
+age2.jitter <-   jitter(age2, factor = 1, amount = NULL)
+plot(age.jitter2, quant.jitter)
+
+
+#how does owning the place affect age and quant
+#ggplot(data=wdt, aes(x=dist, y=switch)) 
+
+ggplot(data=df.2, aes(x=quant, y = age.test)) +
+  geom_jitter(position = position_jitter(height=.01)) +
+  facet_wrap(~ own)
+
+class(df)
+```
+
+
+
+Step 3: Finalize EDA via tables, plots and summaries to make inferences from. 
+Looking at Quant, Size, Age, Age of second fridge initially to understand how the data is distributed 
+
+```{r}
+
+hist(age.test)
+# Shows normal distribution of the age of fridges. It might have been assumed that the age was negative exponential, but it is not.
+
+hist(quant)
+#The number of the fridges used has an expected distribution
+
+hist(size)
+#The size histogram shows that catagory 3 and 4, Medium (17.6 to 22.5 cubic feet) and Large (22.6 to 29.5 cubic feet) respectively
+
+#Looking at how the Age of your first fridge compares to the number of fridges
+plot(age.jitter2, quant.jitter)
+#The distribution is as expected, showing fewer fridges as the age of the fridges increase
+
+
+#lastly look at how your housing status of owner, renter, or neither affects the age or quantitiy attributes (1= Owned or being bought by someone in your household, 2= Rented, 3= Occupied without payment of rent)
+ggplot(data=df.2, aes(x=quant, y = age.test)) +
+  geom_jitter(position = position_jitter(height=.01)) +
+  facet_wrap(~ own)
+
+#comparing the 3 plots, it looks that your housing status does not differ in terms of how old or how many refrigerators you have. 
+
+```
+
+
+factor is for vectors, levels is for Data frames
+length, unique, uniqueN, length(unique()) all do similiar counts
+table returns frequency table
