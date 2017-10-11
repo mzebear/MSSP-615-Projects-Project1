@@ -1,0 +1,403 @@
+---
+title: "Fridge10.10"
+output: pdf_document
+authors: Eesha Pendharkar, Julia Pan, Matthew Zebert, Edward Kang
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(tidyr)
+pacman::p_load("arm","data.table","faraway","foreign","ggplot2","knitr", "dplyr")
+```
+
+##In this document, we explore refrigerator data based on type of houses, climate region and household income. 
+
+
+
+```{r,include=FALSE}
+
+full <-  read.csv("recs2015_public_v1.csv")
+
+#rename desired predictors
+quant <-  full$NUMFRIG; #Number of refrigerators used
+size <- full$SIZRFRI1; #Size of most-used refrigerator
+door <- full$TYPERFR1; #Door arrangement of most-used refrigerator
+age <- full$AGERFRI1; #Age of most-used refrigerator
+ice <- full$ICE; #Through-the-door ice on most-used refrigerator
+size2 <- full$SIZRFRI2; #Size of second most-used refrigerator
+door2 <- full$TYPERFR2; #Door arrangement of second most-used refrigerator
+age2 <- full$AGERFRI2; #Age of second most-used refrigerator
+locate <- full$LOCRFRI2; #Location of second most-used refrigerator
+recyl <- full$RECYCAPP; #Received free recycling of old appliance or equipment (for example, a refrigerator)"
+star <- full$ESFRIG; #Energy Star qualified refrigerator (respondent reported)
+area <- full$REGIONC; #Census Region
+climate <- full$CLIMATE_REGION_PUB #Building America Climate Zone
+own <-  full$KOWNRENT; # Own or rent
+
+
+#combine into data frame
+df <- cbind(quant, size, door, age, ice, size2, door2, age2, locate, recyl, star, area, climate, own)
+df.2 <- data.frame(cbind(quant, size, door, age, ice, size2, door2, age2, locate, recyl, star, area, climate, own))
+class(df.2)
+attach(df.2)
+
+```
+
+```{r, include=FALSE}
+#EDA of size
+table(size)
+head(size)
+summary(size)
+
+#assume NA means they don't have a fridge 
+size[size < 0] <- 0
+
+#EDA of quant and size with plots
+boxplot(quant)
+table(quant)
+hist(quant)
+hist(size)
+size.jitter <-  jitter(size, factor = 1, amount = NULL)
+quant.jitter  <-  jitter(quant, factor = 1, amount = NULL)
+plot(quant.jitter, size.jitter)
+
+#EDA of fridge #2
+table(size2)
+head(size)
+summary(size)
+
+#assume that NA means they don't have a second fridge
+size2[size2 < 0] <- 0
+
+#Remove NA's from age
+age[age < 0] <- NA
+age2[age2 < 0] <- NA
+
+age.jitter <-   jitter(age, factor = 1, amount = NULL)
+age2.jitter <-   jitter(age2, factor = 1, amount = NULL)
+plot(age.jitter, quant.jitter)
+
+#age uses 41 and 42 as responses which throws off the plot
+#replace 41, 42, 5 response in age with 4, 5, and 6
+age.test <-  age
+age.test <- replace(age.test, which(age.test == 41), 4)
+age.test <- replace(age.test, which(age.test == 5), 6)
+age.test <- replace(age.test, which(age.test == 42), 5)
+#df$q2 <- replace(df$q, which(df$q < 0), NA)
+table(age.test)
+table(age)
+
+age.jitter2 <-   jitter(age.test, factor = 1, amount = NULL)
+age2.jitter <-   jitter(age2, factor = 1, amount = NULL)
+plot(age.jitter2, quant.jitter)
+
+
+#how does owning the place affect age and quant
+#ggplot(data=wdt, aes(x=dist, y=switch)) 
+
+ggplot(data=df.2, aes(x=quant, y = age.test)) +
+  geom_jitter(position = position_jitter(height=.01)) +
+  facet_wrap(~ own)
+
+class(df)
+```
+
+```{r, include=FALSE}
+table1<- read.csv("Appliances by climate region.csv", header = FALSE)
+climate.refrig <- table1[103:190, ]
+colnames(climate.refrig) <- c("All homes", "Total U.S", "Very cold/cold", "mixed-humid", "mixed dry/hot dry", "hot-humid", "marine")
+climate.refrig[climate.refrig == "Q"] <- ""
+climate.refrig[climate.refrig == "N"] <- ""
+```
+
+```{r,include=FALSE}
+ref.age <- climate.refrig[21:26, ]
+ref.age$`Total U.S` <- as.numeric(as.character(ref.age$`Total U.S`))
+ref.age$`Very cold/cold` <- as.numeric(as.character(ref.age$`Very cold/cold`))
+ref.age$`mixed-humid` <- as.numeric(as.character(ref.age$`mixed-humid`))
+ref.age$`mixed dry/hot dry` <- as.numeric(as.character(ref.age$`mixed dry/hot dry`))
+ref.age$`hot-humid` <- as.numeric(as.character(ref.age$`hot-humid`))
+ref.age$`marine` <- as.numeric(as.character(ref.age$`marine`))
+```
+
+
+```{r,include=FALSE}
+ref.use <- climate.refrig[1:3, ]
+
+ref.use$`Total U.S` <- as.numeric(as.character(ref.use$`Total U.S`))
+ref.use$`Very cold/cold` <- as.numeric(as.character(ref.use$`Very cold/cold`))
+ref.use$`mixed-humid` <- as.numeric(as.character(ref.use$`mixed-humid`))
+ref.use$`mixed dry/hot dry` <- as.numeric(as.character(ref.use$`mixed dry/hot dry`))
+ref.use$`hot-humid` <- as.numeric(as.character(ref.use$`hot-humid`))
+ref.use$`marine` <- as.numeric(as.character(ref.use$`marine`))
+
+```
+
+```{r,include=FALSE}
+secref.age <- climate.refrig[51: 56, ]
+
+secref.age$`Total U.S` <- as.numeric(as.character(secref.age$`Total U.S`))
+secref.age$`Very cold/cold` <- as.numeric(as.character(secref.age$`Very cold/cold`))
+secref.age$`mixed-humid` <- as.numeric(as.character(secref.age$`mixed-humid`))
+secref.age$`mixed dry/hot dry` <- as.numeric(as.character(secref.age$`mixed dry/hot dry`))
+secref.age$`hot-humid` <- as.numeric(as.character(secref.age$`hot-humid`))
+secref.age$`marine` <- as.numeric(as.character(secref.age$`marine`))
+```
+
+```{r,include=FALSE}
+All.homes <- c("Less than 2 years old", "2 to 4 years old", "5 to 9 years old", "9 to 14 years old", "14 to 20 years old", "More than 20 years old")
+first.ref.age <-c(15.8, 26.2, 41.0, 22.2, 7.4, 4.7)
+second.ref.age <- c(2.8, 5.1, 9.8, 9.3, 4.8, 3.6)
+comparison.ref.age <- data.frame(All.homes, first.ref.age, second.ref.age)
+
+comparison.ref.age$first.ref.age <- as.numeric(as.character(comparison.ref.age$first.ref.age))
+comparison.ref.age$second.ref.age <- as.numeric(as.character(comparison.ref.age$second.ref.age))
+```
+
+```{r,include=FALSE}
+data <- read.csv("Appliances by hh income.csv",header=FALSE)
+
+income_age <- data[123:129,]
+colnames(income_age) <- c("Age","totalUS","<$20,000","$20,000-$39,999","$40,000-$59,999",  "$60,000-$79,999","$80,000-$99,999","$100,000-$119,999","$120,000-$139,999",
+                           "$140,000+")
+
+income_age[income_age=="Q"] <- ""
+income_age[income_age=="N"] <- ""
+
+frdf <- as.data.frame(income_age)
+
+income_age <- frdf[1:4,]
+
+income_age <- income_age %>%
+  gather(key="Income",value="Housing Units",`totalUS`:`$140,000+`)
+
+income_age$`Housing Units` <- as.numeric(income_age$`Housing Units`)
+income_age$Income <- factor(income_age$Income,levels=c("totalUS","<$20,000","$20,000-$39,999","$40,000-$59,999", "$60,000-$79,999","$80,000-$99,999","$100,000-$119,999","$120,000-$139,999",
+                                             "$140,000+"))
+
+income_age$Age <- factor(income_age$Age, levels=c("Less than 2 years old","2 to 4 years old", "5 to 9 years old","10 to 14 years old"))
+```
+
+```{r,include=FALSE}
+data <- read.csv("Appliances by hh income.csv",header=FALSE)
+
+income_age2 <- data[153:159,]
+colnames(income_age2) <- c("Age","totalUS","<$20,000","$20,000-$39,999","$40,000-$59,999",  "$60,000-$79,999","$80,000-$99,999","$100,000-$119,999","$120,000-$139,999",
+                           "$140,000+")
+
+income_age2[income_age2=="Q"] <- ""
+income_age2[income_age2=="N"] <- ""
+
+frdf <- as.data.frame(income_age2)
+
+income_age2 <- frdf[1:4,]
+
+income_age2 <- income_age2 %>%
+  gather(key="Income",value="Housing Units",`totalUS`:`$140,000+`)
+
+income_age2$`Housing Units` <- as.numeric(income_age2$`Housing Units`)
+income_age2$Income <- factor(income_age2$Income,levels=c("totalUS","<$20,000","$20,000-$39,999","$40,000-$59,999", "$60,000-$79,999","$80,000-$99,999","$100,000-$119,999","$120,000-$139,999",
+                                             "$140,000+"))
+
+income_age2$Age <- factor(income_age2$Age, levels=c("Less than 2 years old","2 to 4 years old", "5 to 9 years old","10 to 14 years old"))
+```
+
+
+
+```{r,include=FALSE}
+data <- read.csv("Appliances by hh income.csv",header=FALSE)
+
+fridge_data <- data[103:190,]
+colnames(fridge_data) <- c("FridgeUse","totalUS","<$20,000","$20,000-$39,999","$40,000-$59,999", "$60,000-$79,999","$80,000-$99,999","$100,000-$119,999","$120,000-$139,999",
+                           "$140,000+")
+
+fridge_data[fridge_data=="Q"] <- ""
+fridge_data[fridge_data=="N"] <- ""
+
+frdf <- as.data.frame(fridge_data)
+
+quant <- frdf[1:4,]
+
+quant <- quant %>%
+  gather(key="Income",value="Housing Units",`totalUS`:`$140,000+`)
+
+quant$`Housing Units` <- as.numeric(quant$`Housing Units`)
+quant$Income <- factor(quant$Income,levels=c("totalUS","<$20,000","$20,000-$39,999","$40,000-$59,999", "$60,000-$79,999","$80,000-$99,999","$100,000-$119,999","$120,000-$139,999",  "$140,000+"))
+```
+
+
+```{r,include=FALSE}
+fridge <- read.csv("housingunit.csv", header = TRUE, skip = 4)
+fridge <- subset(fridge, select = -2)
+fridge <- fridge[97:161,]
+
+fridge <- rename(fridge, c("Single.family.detached" = "SingleDetached", "Single.family.attached" = "SingleAttached", "Apartment...2..to.4.unit.building." = "2 to 4 Unit Apt", "Apartment...5.or.more.unit.building." = "5 or More Unit Apt", "Mobile.home" = "Mobile Home"))
+rownames(fridge) <- 1:nrow(fridge)
+fridge[fridge == "Q"] <- ""
+fridge[fridge == "N"] <- ""
+
+#Subsetting the Data
+q1 <- fridge[3:4,]
+q2 <- fridge[7:11,]
+q3 <- fridge[22:27,]
+q4 <- fridge[37:41,]
+q5 <- fridge[52:57,]
+```
+
+####To begin with, let's look at the fridges used according to types of houses.
+
+```{r}
+q1 <- q1 %>% gather(`SingleDetached`:`Mobile Home`, key = "type", value = "value",  na.rm = FALSE)
+ggplot(q1,aes(x=X,y=value,fill=factor(type)))+
+  geom_bar(stat="identity",position="dodge")+
+  xlab("Number of Fridges")+ylab("Count (in millions)")
+```
+
+#For households using 2 or more fridges, we can see a spike for 5 or more unit apartments. More units mean more refrigerators.
+
+
+##Number of refrigerators by income 
+
+```{r}
+ggplot(data=quant)+
+    geom_point(mapping=aes(x=Income,y=`Housing Units`,color=FridgeUse),size=2.5)+
+    ggtitle("Refrigerator Use by Household Income")
+
+```
+
+
+##There is a spike in refrigerators used in the 20-40k income bracket.
+
+#Number of refrigerators by climate region
+
+```{r}
+ggplot(data = ref.use) +
+   geom_point(mapping = aes(x = `All homes`, y = `Total U.S`) ,color = "black") +
+ geom_point(mapping = aes(x = `All homes`, y = `Very cold/cold`) ,color = "blue")+ geom_point(mapping = aes(x = `All homes`, y = `mixed-humid`) ,color = "green") +
+    geom_point(mapping = aes(x = `All homes`, y = `mixed dry/hot dry`) ,color = "red") +
+    geom_point(mapping = aes(x = `All homes`, y = `hot-humid`) ,color = "purple") +
+     geom_point(mapping = aes(x = `All homes`, y = `marine`) ,color = "orange") 
+```
+
+##From this we observe that colder regions use the most refrigerators. The second highest use is seen in humid climates. 
+
+
+
+##So now we know that houses with 5 or more units, 20-40k income and cold regions are our targets. 
+
+
+##We don't know how often these targeted clients buy refrigerators. Let's look at age of refrigerators across type of houses, income and climate regions.
+
+
+#This is the general distribution of refrigerator age. 
+
+```{r}
+hist(age.test)
+```
+
+
+##We can see that most refrigerators are 2.5-3 years old. Let's look at how each parameter changes this general observation.
+
+
+##Age of refrigerator by type of house
+
+
+```{r}
+q3 <- q3 %>% gather(`SingleDetached`:`Mobile Home`, key = "type", value = "value",  na.rm = FALSE)
+ggplot(q3,aes(x=X,y=value,fill=factor(type)))+
+  geom_bar(stat="identity",position="dodge")+
+  xlab("Age of Main Fridge")+ylab("Count (in millions)")
+```
+
+##We can see that there's a substantial increase in the usage of older refrigerators, observed in the mobile homes and 2-4 unit apts using older refrigerators. 
+
+
+#Age  of refrigerator by income
+
+```{r}
+ggplot(data=income_age)+
+  geom_point(mapping=aes(x=Income,y=`Housing Units`,color=Age),size=2.5)+
+  ggtitle("Age of Primary Refrigerators by Household Income")
+```
+
+##From this we see that most families across all income brackets use 5-9 year old refrigerators.
+
+
+##Age of refrigerator by climate region
+
+```{r}
+ggplot(data = ref.age) + 
+     geom_point(mapping = aes(x = `All homes`, y = `Total U.S`) ,color = "black") +
+  geom_point(mapping = aes(x = `All homes`, y = `Very cold/cold`) ,color = "blue")+   geom_point(mapping = aes(x = `All homes`, y = `mixed-humid`) ,color = "green") +
+    geom_point(mapping = aes(x = `All homes`, y = `mixed dry/hot dry`) ,color = "red") +
+    geom_point(mapping = aes(x = `All homes`, y = `hot-humid`) ,color = "purple") +
+     geom_point(mapping = aes(x = `All homes`, y = `marine`) ,color = "orange") 
+```
+
+
+##We see from this scatterplot that people in all climate regions have refrigerators that range between 2 to 9 years old. Very cold and humid regions are the best consumers.
+
+##But we know that a lot of people have more than one fridge. How does the second fridge compare to the first one? Let's see
+
+
+```{r}
+comparison.ref.age$first.ref.age <- as.numeric(as.character(comparison.ref.age$first.ref.age))
+comparison.ref.age$second.ref.age <- as.numeric(as.character(comparison.ref.age$second.ref.age))
+
+
+ggplot(data = comparison.ref.age) +
+  geom_point(mapping = aes(x = All.homes , y = first.ref.age), color = "blue") +
+  geom_point(mapping = aes(x = All.homes , y = second.ref.age), color = "red") 
+
+```
+
+##We see here that the second refrigerator is usually between 5-14 years old, which means people have older second refrigerators. Another observation that confirms this is the similar amount of fridges more than 20 years old.
+
+
+##Age of second refrigerator by type of house
+
+```{r} 
+q5 <- q5 %>% gather(`SingleDetached`:`Mobile Home`, key = "type", value = "value",  na.rm = FALSE)
+ggplot(q5,aes(x=X,y=value,fill=factor(type)))+
+  geom_bar(stat="identity",position="dodge")+
+  xlab("Age of Second Fridge")+ylab("Count (in millions)")
+```
+##Here we see that 5 or more unit apartments use second refrigerators that are 15-19 years old. That means the second refrigerators are newer than the first refrigerators in these units.
+
+
+#Age of second refrigerator by Income
+
+```{r}
+ggplot(data=income_age2)+
+  geom_point(mapping=aes(x=Income,y=`Housing Units`,color=Age),size=2.5)+
+  ggtitle("Age of Secondary Refrigerators by Household Income")
+```
+
+##Here we see that age of refrigerators is evenly spaced out across all income brackets. You'd think that the richer people would have newer second refrigerators, but that isn't what's happening.
+
+
+##Age of second refrigerator by Climate
+
+```{r}
+ggplot(data = secref.age) +
+   geom_point(mapping = aes(x = `All homes`, y = `Total U.S`) ,color = "black") +
+geom_point(mapping = aes(x = `All homes`, y = `Very cold/cold`) ,color = "blue") +
+geom_point(mapping = aes(x = `All homes`, y = `mixed-humid`) ,color = "green") + geom_point(mapping = aes(x = `All homes`, y = `mixed dry/hot dry`) ,color = "red")+  geom_point(mapping = aes(x = `All homes`, y = `hot-humid`) ,color = "purple") +
+   geom_point(mapping = aes(x = `All homes`, y = `marine`) ,color = "orange") 
+
+
+```
+
+##We see here that hot and humid climates tend to have second refrigerators that are between 5-14 years old. 
+
+
+
+##From all this EDA, we know what climate regions, incomes and types of houses we have to target. Age told us how often people buy refrigerators in terms of these parameters. Promotions and exchange schemes can help boost sales in regions and types of houses that show low numbers as of now.
+
+
+
